@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS Lab - Media Pembelajaran Interaktif</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>XSS Educational Lab</h1>
+            <p class="subtitle">Belajar Cross-Site Scripting melalui perbandingan langsung.</p>
+        </header>
+
+        <main class="lab-grid">
+            <section class="card">
+                <div class="card-header">
+                    <span class="badge badge-vulnerable">Vulnerable</span>
+                    <h2>Reflected XSS</h2>
+                </div>
+                <p class="text-secondary" style="margin-bottom: 1.5rem;">Input di bawah ini tidak difilter/escaping, memungkinkan eksekusi script langsung.</p>
+                
+                <form action="/vulnerable" method="GET">
+                    <div class="form-group">
+                        <label for="nama_v">Masukkan Nama/Script:</label>
+                        <input type="text" id="nama_v" name="nama" placeholder="Contoh: <script>alert(1)</script>">
+                    </div>
+                    <button type="submit">Kirim (Vulnerable)</button>
+                </form>
+
+                {% if mode == 'vulnerable' and query %}
+                <div class="result-box">
+                    <p>Output untuk: <strong>{{ query|safe }}</strong></p>
+                </div>
+                <div class="code-snippet">
+                    <code>return render_template_string(HTML, nama=nama)</code>
+                    <p style="color: var(--danger); font-size: 0.75rem; margin-top: 5px;">! Langsung merender string tanpa proteksi.</p>
+                </div>
+                {% endif %}
+
+                <div class="payload-list">
+                    <label>Payload untuk dicoba:</label>
+                    <div class="payload-item" onclick="setPayload('<script>alert(\'XSS Terdeteksi!\')</script>')">
+                        <span class="impact-tag impact-high">Basic</span> &lt;script&gt;alert('XSS')&lt;/script&gt;
+                    </div>
+                    <div class="payload-item" onclick="setPayload('<img src=x onerror=alert(\'XSS_via_Img\')>')">
+                        <span class="impact-tag impact-high">Event</span> &lt;img src=x onerror=alert('XSS')&gt;
+                    </div>
+                    <div class="payload-item" onclick="setPayload('<svg onload=alert(\'XSS_via_SVG\')>')">
+                        <span class="impact-tag impact-high">SVG</span> &lt;svg onload=alert('XSS')&gt;
+                    </div>
+                    <div class="payload-item" onclick="setPayload('<script>document.body.innerHTML=\'<h1>HACKED!</h1>\'</script>')">
+                        <span class="impact-tag impact-high">DOM</span> Modification Payload
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <span class="badge badge-secure">Secure</span>
+                    <h2>Defense Implemented</h2>
+                </div>
+                <p class="text-secondary" style="margin-bottom: 1.5rem;">Input di bawah ini diproses dengan HTML Escaping otomatis oleh Jinja2.</p>
+                
+                <form action="/secure" method="GET">
+                    <div class="form-group">
+                        <label for="nama_s">Masukkan Nama/Script:</label>
+                        <input type="text" id="nama_s" name="nama" placeholder="Sama dengan sisi kiri...">
+                    </div>
+                    <button type="submit" style="background: linear-gradient(90deg, var(--success), #3fb950);">Kirim (Secure)</button>
+                </form>
+
+                {% if mode == 'secure' and query %}
+                <div class="result-box">
+                    <p>Output aman: <strong>{{ query }}</strong></p>
+                </div>
+                <div class="code-snippet">
+                    <code>{{ '{{' }} query {{ '}}' }}</code>
+                    <p style="color: var(--success); font-size: 0.75rem; margin-top: 5px;">✓ Escaping otomatis aktif.</p>
+                </div>
+                {% endif %}
+
+                <div class="payload-list">
+                    <label>Hasil Mitigasi:</label>
+                    <div class="code-snippet" style="font-size: 0.75rem; color: var(--text-secondary);">
+                        &lt;script&gt; &rarr; &amp;lt;script&amp;gt;<br>
+                        &quot; &rarr; &amp;quot;<br>
+                        ' &rarr; &amp;#39;<br>
+                        &amp; &rarr; &amp;amp;
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <section class="education-section">
+            <div class="info-card">
+                <h2>📚 Edukasi & Mitigasi XSS</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <h3>Apa itu Reflected XSS?</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                            Reflected XSS terjadi ketika aplikasi menerima data dalam HTTP request dan menyertakan data tersebut dalam respons secara tidak aman. Script berbahaya "dipantulkan" kembali ke browser korban.
+                        </p>
+                    </div>
+                    <div class="info-item">
+                        <h3>Dampak Serangan</h3>
+                        <ul style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-left: 1rem;">
+                            <li>Pencurian Session/Cookie.</li>
+                            <li>Defacement (Mengubah tampilan web).</li>
+                            <li>Phishing lewat manipulasi form.</li>
+                            <li>Redirection ke situs berbahaya.</li>
+                        </ul>
+                    </div>
+                    <div class="info-item">
+                        <h3>Strategi Mitigasi</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                            Gunakan <strong>Context-Aware Encoding</strong>. Jangan pernah merender input user langsung ke HTML. Gunakan filter modern dan Content Security Policy (CSP).
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <h3>Perbandingan Code (Backend)</h3>
+                    <div class="comparison-grid">
+                        <div class="info-item" style="border-left: 4px solid var(--danger);">
+                            <div class="code-header" style="color: var(--danger);">⚠ RENTAN (Vulnerable)</div>
+                            <div class="code-snippet">
+<pre style="margin:0;"># Menggunakan |safe mematikan proteksi
+{{ '{{' }} query|safe {{ '}}' }}</pre>
+                            </div>
+                        </div>
+                        <div class="info-item" style="border-left: 4px solid var(--success);">
+                            <div class="code-header" style="color: var(--success);">✓ AMAN (Secure)</div>
+                            <div class="code-snippet">
+<pre style="margin:0;"># Default Jinja2 melakukan escaping
+{{ '{{' }} query {{ '}}' }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Educational Tool - Keamanan Web</p>
+        </footer>
+    </div>
+
+    <script>
+        function setPayload(p) {
+            document.getElementById('nama_v').value = p;
+            document.getElementById('nama_s').value = p;
+        }
+    </script>
+</body>
+</html>
